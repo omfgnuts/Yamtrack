@@ -14,9 +14,9 @@ To track a branch image instead of `latest`, set the tag first (a `/` in a branc
 var_yamtrack_tag=feat-foo bash -c "$(curl -fsSL https://raw.githubusercontent.com/omfgnuts/Yamtrack/dev/proxmox/ct/yamtrack-omfgnuts.sh)"
 ```
 
-## Before the first install
+## Image access
 
-GitHub creates container packages as private. After the first image build, open the [package settings](https://github.com/users/omfgnuts/packages/container/yamtrack-omfgnuts/settings) and set the visibility to public, or the container cannot pull the image.
+The container pulls the image without credentials, so the package must stay public. If an install or update fails with a pull error, check the visibility in the [package settings](https://github.com/users/omfgnuts/packages/container/yamtrack-omfgnuts/settings).
 
 ## Image tags
 
