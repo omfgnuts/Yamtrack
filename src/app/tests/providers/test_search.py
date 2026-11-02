@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -204,16 +205,42 @@ class Search(TestCase):
         for game in response["results"]:
             self.assertTrue(all(key in game for key in required_keys))
 
-    def test_books(self):
-        """Test the search method for books.
+    @patch("app.providers.openlibrary.cache")
+    @patch("app.providers.openlibrary.services.api_request")
+    def test_books(self, mock_api_request, mock_cache):
+        """Test the search method for books with a recorded Open Library response.
 
         Assert that all required keys are present in each entry.
         """
+        mock_cache.get.return_value = None
+        with Path(mock_path / "search_book_openlibrary.json").open() as file:
+            mock_api_request.return_value = json.load(file)
+
         response = openlibrary.search("The Name of the Wind", 1)
         required_keys = {"media_id", "media_type", "title", "image"}
 
+        params = mock_api_request.call_args.kwargs["params"]
+        self.assertEqual(params["q"], "The Name of the Wind")
+        self.assertEqual(response["total_results"], 353)
+        self.assertEqual(len(response["results"]), 3)
         for book in response["results"]:
             self.assertTrue(all(key in book for key in required_keys))
+
+        first, second = response["results"][:2]
+        self.assertEqual(first["media_id"], "OL35447857M")
+        self.assertEqual(first["title"], "The Name of the Wind")
+        self.assertEqual(
+            first["image"],
+            "https://covers.openlibrary.org/b/id/12391248-L.jpg",
+        )
+        # an edition titled differently from its work gets both titles
+        self.assertEqual(
+            second["title"],
+            "3 Book Set of the Kingkiller Chronicle Series (the Name of the Wind, "
+            "Wise Man's Fear and the Slow Regard of Silent Things): "
+            "Kingkiller Chronicle Patrick Rothfuss Collection 3 Books Set",
+        )
+        self.assertEqual(second["image"], settings.IMG_NONE)
 
     def test_comics(self):
         """Test the search method for comics.

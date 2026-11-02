@@ -1,0 +1,58 @@
+{
+    "numFound": 353,
+    "start": 0,
+    "numFoundExact": true,
+    "num_found": 353,
+    "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+    "q": "The Name of the Wind",
+    "offset": null,
+    "docs": [
+        {
+            "key": "/works/OL8479867W",
+            "title": "The Name of the Wind",
+            "editions": {
+                "numFound": 54,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                    {
+                        "key": "/books/OL35447857M",
+                        "title": "The Name of the Wind",
+                        "cover_i": 12391248
+                    }
+                ]
+            }
+        },
+        {
+            "key": "/works/OL24343635W",
+            "title": "Kingkiller Chronicle Patrick Rothfuss Collection 3 Books Set",
+            "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                    {
+                        "key": "/books/OL57775972M",
+                        "title": "3 Book Set of the Kingkiller Chronicle Series (the Name of the Wind, Wise Man's Fear and the Slow Regard of Silent Things)"
+                    }
+                ]
+            }
+        },
+        {
+            "key": "/works/OL59861W",
+            "title": "The Wind's Twelve Quarters",
+            "editions": {
+                "numFound": 25,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                    {
+                        "key": "/books/OL18708805M",
+                        "title": "The Wind's Twelve Quarters",
+                        "cover_i": 6599490
+                    }
+                ]
+            }
+        }
+    ]
+}
