@@ -612,9 +612,13 @@ class Metadata(TestCase):
         response = openlibrary.get_publish_date({"publish_date": "Oct 01, 2017"})
         self.assertEqual(response, "2017-10-01")
 
-    @patch("app.providers.openlibrary.asyncio.sleep", new_callable=AsyncMock)
-    def test_openlibrary_author_fetch_retries_transient_errors(self, mock_sleep):
+    # Patch the asyncio name Open Library looks up, not asyncio.sleep itself: that
+    # function is shared with event loops in other threads, such as the rate
+    # limiter's leaker, which would then await the mock too.
+    @patch("app.providers.openlibrary.asyncio")
+    def test_openlibrary_author_fetch_retries_transient_errors(self, mock_asyncio):
         """Test Open Library author fetches retry server errors."""
+        mock_asyncio.sleep = AsyncMock()
         failed_response = MagicMock(status=503)
         ok_response = MagicMock(status=200)
         ok_response.json = AsyncMock(return_value={"name": "George Orwell"})
@@ -628,11 +632,12 @@ class Metadata(TestCase):
 
         self.assertEqual(response, {"name": "George Orwell"})
         self.assertEqual(session.get.call_count, 2)
-        mock_sleep.assert_awaited_once_with(1)
+        mock_asyncio.sleep.assert_awaited_once_with(1)
 
-    @patch("app.providers.openlibrary.asyncio.sleep", new_callable=AsyncMock)
-    def test_openlibrary_author_fetch_does_not_retry_not_found(self, mock_sleep):
+    @patch("app.providers.openlibrary.asyncio")
+    def test_openlibrary_author_fetch_does_not_retry_not_found(self, mock_asyncio):
         """Test Open Library author fetches don't retry client errors."""
+        mock_asyncio.sleep = AsyncMock()
         session = MagicMock()
         session.get.return_value.__aenter__.return_value = MagicMock(status=404)
 
@@ -641,14 +646,15 @@ class Metadata(TestCase):
         # empty dict marks a permanent miss, so the book can still be cached
         self.assertEqual(response, {})
         self.assertEqual(session.get.call_count, 1)
-        mock_sleep.assert_not_awaited()
+        mock_asyncio.sleep.assert_not_awaited()
 
-    @patch("app.providers.openlibrary.asyncio.sleep", new_callable=AsyncMock)
+    @patch("app.providers.openlibrary.asyncio")
     def test_openlibrary_author_fetch_gives_up_after_transient_errors(
         self,
-        mock_sleep,
+        mock_asyncio,
     ):
         """Test Open Library author fetches return None when retries run out."""
+        mock_asyncio.sleep = AsyncMock()
         session = MagicMock()
         session.get.return_value.__aenter__.return_value = MagicMock(status=503)
 
@@ -656,7 +662,10 @@ class Metadata(TestCase):
 
         self.assertIsNone(response)
         self.assertEqual(session.get.call_count, openlibrary.AUTHOR_FETCH_ATTEMPTS)
-        self.assertEqual(mock_sleep.await_count, openlibrary.AUTHOR_FETCH_ATTEMPTS - 1)
+        self.assertEqual(
+            mock_asyncio.sleep.await_count,
+            openlibrary.AUTHOR_FETCH_ATTEMPTS - 1,
+        )
 
     @patch("app.providers.openlibrary.cache")
     @patch("app.providers.openlibrary.get_ratings", new_callable=AsyncMock)
