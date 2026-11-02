@@ -6,11 +6,13 @@ jobs:
   ghcr-cleanup-image:
     name: ghcr cleanup action
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
 
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          package: yamtrack
+          package: yamtrack-omfgnuts
           keep-n-untagged: 15
           delete-ghost-images: true
           delete-orphaned-images: true
