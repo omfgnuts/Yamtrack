@@ -1,0 +1,96 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: dependencies, translations, database",
+      "detail": "Run after cloning or pulling: creates .env, syncs uv, installs hooks and Chromium, compiles translations, migrates",
+      "type": "shell",
+      "command": "test -f .env || cp .env.example .env; uv sync && uv run pre-commit install && uv run playwright install chromium && cd src && uv run manage.py compilemessages && uv run manage.py migrate",
+      "problemMatcher": []
+    },
+    {
+      "label": "Redis",
+      "detail": "Starts an in-memory Redis on :6379 unless one is already running",
+      "type": "shell",
+      "command": "redis-cli ping >/dev/null 2>&1 && echo 'Redis is already running' || exec redis-server --save '' --appendonly no",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "redis",
+        "pattern": {
+          "regexp": "a^"
+        },
+        "background": {
+          "activeByDefault": true,
+          "beginsPattern": ".",
+          "endsPattern": "Ready to accept connections|already running"
+        }
+      }
+    },
+    {
+      "label": "Run app: web + worker",
+      "detail": "The Procfile's web and worker via honcho, on http://localhost:8000 (run \"Tailwind: watch\" too when changing styles)",
+      "type": "shell",
+      "command": "uvx honcho -e /dev/null start web worker",
+      "dependsOn": "Redis",
+      "problemMatcher": []
+    },
+    {
+      "label": "Tailwind: watch",
+      "type": "shell",
+      "detail": "NODE_PATH lets an npm-installed CLI resolve @import \"tailwindcss\"; the standalone binary ignores it",
+      "command": "NODE_PATH=\"$(npm root -g 2>/dev/null)\" tailwindcss -i ./static/css/input.css -o ./static/css/main.css --watch",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "tailwind",
+        "pattern": {
+          "regexp": "a^"
+        },
+        "background": {
+          "activeByDefault": true,
+          "beginsPattern": "tailwindcss v",
+          "endsPattern": "Done in"
+        }
+      }
+    },
+    {
+      "label": "Tests: full suite (same as CI)",
+      "type": "shell",
+      "command": "uv run manage.py test app users integrations lists events --parallel",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint: pre-commit on all files",
+      "type": "shell",
+      "command": "uv run pre-commit run --all-files",
+      "problemMatcher": []
+    },
+    {
+      "label": "Django: makemigrations",
+      "type": "shell",
+      "command": "uv run manage.py makemigrations",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Django: migrate",
+      "type": "shell",
+      "command": "uv run manage.py migrate",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

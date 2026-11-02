@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Django: runserver",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/manage.py",
+      "args": [
+        "runserver"
+      ],
+      "cwd": "${workspaceFolder}/src",
+      "django": true,
+      "justMyCode": true,
+      "preLaunchTask": "Redis"
+    },
+    {
+      "name": "Celery: worker + beat",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "celery",
+      "args": [
+        "-A",
+        "config",
+        "worker",
+        "--beat",
+        "--scheduler",
+        "django",
+        "--loglevel",
+        "INFO",
+        "--pool",
+        "solo"
+      ],
+      "cwd": "${workspaceFolder}/src",
+      "justMyCode": true,
+      "preLaunchTask": "Redis"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Django + Celery",
+      "configurations": [
+        "Django: runserver",
+        "Celery: worker + beat"
+      ],
+      "stopAll": true
+    }
+  ]
+}
