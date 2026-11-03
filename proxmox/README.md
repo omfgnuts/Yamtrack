@@ -22,13 +22,17 @@ The container pulls the image without credentials, so the package must stay publ
 
 The installer and `update` retry a failed pull twice. If it still fails, the installation log shows Docker's error.
 
-If the error contains `lookup ghcr.io on <ip>:53: no such host`, the container's DNS server failed. By default the container uses the Proxmox host's DNS server, often the router. Install with a different DNS server:
+If the error contains `lookup ghcr.io on <ip>:53: no such host`, the container's DNS server, usually your router, stopped answering for `ghcr.io`. Unlike Docker Hub, `ghcr.io` has no IPv6 address. Some home routers then treat the name as missing for up to 15 minutes, so Postgres and Redis download fine but the Yamtrack image fails partway.
+
+The fix is a different DNS server for the container. With DHCP, the container takes its DNS server from the router and ignores `var_ns`, so give it a static IP as well. Pick an unused address outside the router's DHCP range:
 
 ```bash
-var_ns=1.1.1.1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/omfgnuts/Yamtrack/dev/proxmox/ct/yamtrack-omfgnuts.sh)"
+var_net=192.168.1.50/24 var_gateway=192.168.1.254 var_ns=1.1.1.1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/omfgnuts/Yamtrack/dev/proxmox/ct/yamtrack-omfgnuts.sh)"
 ```
 
-For an existing container, run `pct set <CTID> --nameserver 1.1.1.1` on the host, then restart the container.
+When the installer reports `DNS resolution failed`, the engine also offers "Retry with DNS override". That gets the install through, but DHCP restores the router's DNS server at the next restart.
+
+For an existing container: in the Proxmox web UI, set its network device to a static IP and its DNS server to `1.1.1.1`, then restart it. Then update `URLS` in `/opt/yamtrack/.env` to the new IP and run `update`.
 
 ## Image tags
 

@@ -82,13 +82,19 @@ msg_ok "Configured Yamtrack"
 
 msg_info "Pulling Images"
 cd /opt/yamtrack || exit
-# Router DNS often fails a few of the many lookups Docker makes while fetching layers
 for attempt in 1 2 3; do
   $STD docker compose pull && break
   if ((attempt == 3)); then
-    msg_error "Could not pull the Docker images, Docker's error is in the installation log"
+    rc=1
+    if ! getent ahostsv4 ghcr.io >/dev/null; then
+      msg_error "DNS resolution failed for ghcr.io in the container"
+      # 6 means "could not resolve host", for which the engine offers "Retry with DNS override"
+      rc=6
+    else
+      msg_error "Could not pull the Docker images, Docker's error is in the installation log"
+    fi
     echo -e "${TAB}Troubleshooting: https://github.com/omfgnuts/Yamtrack/tree/dev/proxmox#pull-errors"
-    exit 1
+    exit "$rc"
   fi
   sleep 15
 done

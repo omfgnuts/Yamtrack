@@ -36,12 +36,15 @@ function update_script() {
   cd /opt/yamtrack || exit
 
   msg_info "Pulling Images"
-  # Router DNS often fails a few of the many lookups Docker makes while fetching layers
   for attempt in 1 2 3; do
     $STD docker compose pull && break
     if ((attempt == 3)); then
-      msg_error "Could not pull the Docker images. To see Docker's error, run:"
-      echo -e "${TAB}docker compose -f /opt/yamtrack/compose.yaml pull"
+      if ! getent ahostsv4 ghcr.io >/dev/null; then
+        msg_error "DNS resolution failed for ghcr.io in the container"
+      else
+        msg_error "Could not pull the Docker images. To see Docker's error, run:"
+        echo -e "${TAB}docker compose -f /opt/yamtrack/compose.yaml pull"
+      fi
       echo -e "${TAB}Troubleshooting: https://github.com/omfgnuts/Yamtrack/tree/dev/proxmox#pull-errors"
       exit 1
     fi
