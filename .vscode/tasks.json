@@ -58,7 +58,7 @@
     {
       "label": "Tests: full suite (same as CI)",
       "type": "shell",
-      "command": "uv run manage.py test app users integrations lists events --parallel",
+      "command": "uv run manage.py test app users integrations lists events api --parallel",
       "options": {
         "cwd": "${workspaceFolder}/src"
       },
