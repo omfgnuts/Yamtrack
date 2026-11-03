@@ -16,7 +16,19 @@ var_yamtrack_tag=feat-foo bash -c "$(curl -fsSL https://raw.githubusercontent.co
 
 ## Image access
 
-The container pulls the image without credentials, so the package must stay public. If an install or update fails with a pull error, check the visibility in the [package settings](https://github.com/users/omfgnuts/packages/container/yamtrack-omfgnuts/settings).
+The container pulls the image without credentials, so the package must stay public. You can check the visibility in the [package settings](https://github.com/users/omfgnuts/packages/container/yamtrack-omfgnuts/settings).
+
+## Pull errors
+
+The installer and `update` retry a failed pull twice. If it still fails, the installation log shows Docker's error.
+
+If the error contains `lookup ghcr.io on <ip>:53: no such host`, the container's DNS server failed. By default the container uses the Proxmox host's DNS server, often the router. Install with a different DNS server:
+
+```bash
+var_ns=1.1.1.1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/omfgnuts/Yamtrack/dev/proxmox/ct/yamtrack-omfgnuts.sh)"
+```
+
+For an existing container, run `pct set <CTID> --nameserver 1.1.1.1` on the host, then restart the container.
 
 ## Image tags
 

@@ -36,12 +36,17 @@ function update_script() {
   cd /opt/yamtrack || exit
 
   msg_info "Pulling Images"
-  if ! $STD docker compose pull; then
-    msg_error "Could not pull the Yamtrack image"
-    echo -e "${TAB}If the package is private, make it public at:"
-    echo -e "${TAB}https://github.com/users/omfgnuts/packages/container/yamtrack-omfgnuts/settings"
-    exit 1
-  fi
+  # Router DNS often fails a few of the many lookups Docker makes while fetching layers
+  for attempt in 1 2 3; do
+    $STD docker compose pull && break
+    if ((attempt == 3)); then
+      msg_error "Could not pull the Docker images. To see Docker's error, run:"
+      echo -e "${TAB}docker compose -f /opt/yamtrack/compose.yaml pull"
+      echo -e "${TAB}Troubleshooting: https://github.com/omfgnuts/Yamtrack/tree/dev/proxmox#pull-errors"
+      exit 1
+    fi
+    sleep 15
+  done
   msg_ok "Pulled Images"
 
   msg_info "Restarting Yamtrack"
