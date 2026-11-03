@@ -86,6 +86,23 @@ max-positional-args = 6
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
 
+# Upstream's feat/add-api code isn't lint-clean yet; drop these once it is.
+[tool.ruff.lint.per-file-ignores]
+"src/api/**" = [
+  "C901",
+  "E501",
+  "FIX002",
+  "LOG004",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+  "RUF100",
+  "W505",
+]
+"src/lists/views.py" = ["FIX002"]
+
 [tool.djlint]
 custom_blocks = "element,slot,setvar"
 preserve_blank_lines = true
