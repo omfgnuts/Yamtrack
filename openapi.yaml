@@ -3686,6 +3686,23 @@ components:
             - $ref: "#/components/schemas/MovieRelated"
             - $ref: "#/components/schemas/SeasonRelated"
             - $ref: "#/components/schemas/TVRelated"
+        cast:
+          type: array
+          description: Up to 30 main cast members. Only TMDB movies have cast data, other media return an empty list
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: TMDB person id
+              name:
+                type: string
+              character:
+                type: string
+              image:
+                type: string
+                format: uri
+                description: Profile picture URL
         item_id:
           $ref: "#/components/schemas/ItemId"
         parent_id:

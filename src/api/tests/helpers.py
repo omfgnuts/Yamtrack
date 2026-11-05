@@ -85,6 +85,9 @@ def check_complete_media_structure(test_case, item):
     check_details_structure(test_case, item["media_type"], item["details"])
     test_case.assertIn("related", item)
     check_related_structure(test_case, item["media_type"], item["related"])
+    test_case.assertIn("cast", item)
+    for member in item["cast"]:
+        check_cast_member_structure(test_case, member)
     test_case.assertIn("item_id", item)
     check_item_id_structure(test_case, item["item_id"])
     test_case.assertIn("parent_id", item)
@@ -99,6 +102,14 @@ def check_complete_media_structure(test_case, item):
     test_case.assertIn("lists", item)
     for lst in item["lists"]:
         check_minimized_lists_structure(test_case, lst)
+
+
+def check_cast_member_structure(test_case, item):
+    """Assert that the given item follows the expected cast member structure."""
+    test_case.assertIn("id", item)
+    test_case.assertIn("name", item)
+    test_case.assertIn("character", item)
+    test_case.assertIn("image", item)
 
 
 def check_consumption_structure(test_case, item):

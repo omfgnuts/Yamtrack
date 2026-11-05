@@ -547,6 +547,57 @@ class MediaCoreTests(YamtrackApiTestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         check_complete_media_structure(self, payload)
+        self.assertEqual(payload["cast"], [])
+
+    @patch("api.views.services.get_media_metadata")
+    def test_media_detail_get_returns_cast(self, mock_metadata):
+        """Media detail GET should return the cast from the provider metadata."""
+        movie_item = self.items_by_type[MediaTypes.MOVIE.value][0]
+        cast = [
+            {
+                "id": 819,
+                "name": "Edward Norton",
+                "character": "Narrator",
+                "image": "https://image.tmdb.org/t/p/w500/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+            },
+            {
+                "id": 287,
+                "name": "Brad Pitt",
+                "character": "Tyler Durden",
+                "image": "https://image.tmdb.org/t/p/w500/cckcYc2v0yh1tc9QjRelptcOBko.jpg",
+            },
+        ]
+        mock_metadata.return_value = {
+            "media_id": movie_item.media_id,
+            "source": movie_item.source,
+            "media_type": movie_item.media_type,
+            "title": movie_item.title,
+            "image": movie_item.image,
+            "max_progress": 1,
+            "details": {
+                "format": "Movie",
+                "release_date": "1999-10-15",
+                "status": "Released",
+                "runtime": "2h 19m",
+                "studios": ["Fox 2000 Pictures"],
+                "country": "United States",
+                "languages": ["English"],
+            },
+            "related": {"recommendations": []},
+            "cast": cast,
+        }
+
+        response = self.call_api(
+            "get",
+            "api_media_detail",
+            args=(MediaTypes.MOVIE.value, movie_item.source, movie_item.media_id),
+            headers=self.auth_headers,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        check_complete_media_structure(self, payload)
+        self.assertEqual(payload["cast"], cast)
 
     def test_media_detail_get_invalid_type_returns_bad_request(self):
         """Media detail endpoint should reject unsupported media types."""

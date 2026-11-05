@@ -337,6 +337,7 @@ class CompleteMediaSerializer(serializers.Serializer):
             else None,
             "details": details,
             "related": related,
+            "cast": media_metadata.get("cast", []),
             "item_id": ItemIdField().to_representation(temp_media),
             "parent_id": ParentIdField().to_representation(temp_media),
             "tracked": consumptions_number > 0,
