@@ -82,12 +82,22 @@ msg_ok "Configured Yamtrack"
 
 msg_info "Pulling Images"
 cd /opt/yamtrack || exit
-if ! $STD docker compose pull; then
-  msg_error "Could not pull ghcr.io/omfgnuts/yamtrack-omfgnuts:${var_yamtrack_tag:-latest}"
-  echo -e "${TAB}If the package is private, make it public at:"
-  echo -e "${TAB}https://github.com/users/omfgnuts/packages/container/yamtrack-omfgnuts/settings"
-  exit 1
-fi
+for attempt in 1 2 3; do
+  $STD docker compose pull && break
+  if ((attempt == 3)); then
+    rc=1
+    if ! getent ahostsv4 ghcr.io >/dev/null; then
+      msg_error "DNS resolution failed for ghcr.io in the container"
+      # 6 means "could not resolve host", for which the engine offers "Retry with DNS override"
+      rc=6
+    else
+      msg_error "Could not pull the Docker images, Docker's error is in the installation log"
+    fi
+    echo -e "${TAB}Troubleshooting: https://github.com/omfgnuts/Yamtrack/tree/dev/proxmox#pull-errors"
+    exit "$rc"
+  fi
+  sleep 15
+done
 msg_ok "Pulled Images"
 
 msg_info "Starting Yamtrack"
