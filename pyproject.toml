@@ -27,6 +27,8 @@ dependencies = [
   "django-select2~=8.4.8",
   "django-simple-history~=3.13.0",
   "django-widget-tweaks~=1.5.1",
+  "djangorestframework~=3.16.1",
+  "drf-spectacular~=0.29.0",
   "gunicorn~=26.0.0",
   "icalendar~=7.2.2",
   "pillow~=12.3.0",
@@ -72,7 +74,7 @@ force-exclude = true
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["ANN", "PT", "PD", "D100", "D104", "RUF012", "SLF001", "COM812", "CPY001"]
+ignore = ["ANN", "PT", "PD", "D100", "D104", "RUF012", "SLF001", "COM812", "CPY001", "TD002", "TD003", "TD004"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
@@ -83,6 +85,23 @@ max-positional-args = 6
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
+
+# Upstream's feat/add-api code isn't lint-clean yet; drop these once it is.
+[tool.ruff.lint.per-file-ignores]
+"src/api/**" = [
+  "C901",
+  "E501",
+  "FIX002",
+  "LOG004",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+  "RUF100",
+  "W505",
+]
+"src/lists/views.py" = ["FIX002"]
 
 [tool.djlint]
 custom_blocks = "element,slot,setvar"
