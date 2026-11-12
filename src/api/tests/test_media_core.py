@@ -773,7 +773,7 @@ class MediaCoreTests(YamtrackApiTestCase):
         check_complete_media_structure(self, payload)
         self.assertEqual(payload["cast"], [])
 
-    @patch("api.views.services.get_media_metadata")
+    @patch("app.providers.services.get_media_metadata")
     def test_media_detail_get_returns_cast(self, mock_metadata):
         """Media detail GET should return the cast from the provider metadata."""
         movie_item = self.items_by_type[MediaTypes.MOVIE.value][0]
