@@ -53,10 +53,28 @@ function update_script() {
   msg_ok "Pulled Images"
 
   msg_info "Restarting Yamtrack"
+  # Builds before the lists 0005 migration created its constraint in 0004. Record 0005
+  # as applied on those databases, or migrate fails creating the constraint again.
+  local fake_lists_0005="INSERT INTO django_migrations (app, name, applied)
+    SELECT 'lists', '0005_customlistitem_unique_list_item_id', now()
+    WHERE EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lists_customlistitem_unique_list_item_id')
+    AND NOT EXISTS (SELECT 1 FROM django_migrations WHERE app = 'lists' AND name = '0005_customlistitem_unique_list_item_id');"
+  $STD docker compose up -d --wait db
+  $STD docker compose exec -T db psql -U yamtrack -d yamtrack -v ON_ERROR_STOP=1 -c "$fake_lists_0005" ||
+    msg_warn "Could not check the lists migration state"
+
   $STD docker compose up -d --remove-orphans
   $STD docker image prune -f
-  msg_ok "Restarted Yamtrack"
-  msg_ok "Updated successfully!"
+  for _ in $(seq 1 60); do
+    [[ "$(docker inspect --format '{{.State.Health.Status}}' yamtrack 2>/dev/null)" == "healthy" ]] && break
+    sleep 5
+  done
+  if [[ "$(docker inspect --format '{{.State.Health.Status}}' yamtrack 2>/dev/null)" == "healthy" ]]; then
+    msg_ok "Restarted Yamtrack"
+    msg_ok "Updated successfully!"
+  else
+    msg_warn "Yamtrack is not healthy yet, check: docker compose -f /opt/yamtrack/compose.yaml logs yamtrack"
+  fi
   exit
 }
 
