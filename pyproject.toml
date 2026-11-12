@@ -93,7 +93,6 @@ convention = "pep257"
 "src/api/**" = [
   "C901",
   "E501",
-  "FIX002",
   "LOG004",
   "PLR0911",
   "PLR0912",
@@ -103,7 +102,6 @@ convention = "pep257"
   "RUF100",
   "W505",
 ]
-"src/lists/views.py" = ["FIX002"]
 
 [tool.djlint]
 custom_blocks = "element,slot,setvar"
