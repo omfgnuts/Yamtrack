@@ -121,10 +121,6 @@ Open the development server at:
 http://localhost:8000
 ```
 
-## Localization (i18n)
-
-See [Localization](localization.md).
-
 ## API
 
 Generate the OpenAPI schema with the following command:
@@ -142,6 +138,10 @@ When schema serving is enabled (default: `DEBUG=True`, or by setting `SPECTACULA
 
 - `http://localhost:8000/api/v1/schema/`
 - `http://localhost:8000/api/v1/docs/`
+
+## Localization (i18n)
+
+See [Localization](localization.md).
 
 ## Documentation
 
