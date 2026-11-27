@@ -837,6 +837,32 @@ class CompleteMediaSerializer(serializers.Serializer):
 
         media_metadata["related"]["episodes"] = processed_episodes
 
+    @staticmethod
+    def _build_details(media_metadata):
+        """Build the details dict, moving and normalizing provider-specific fields."""
+        details = media_metadata.get("details", {})
+        for key in (
+            "tvdb_id",
+            "last_episode_season",
+            "next_episode_season",
+            "last_issue_id",
+        ):
+            if key in media_metadata:
+                details[key] = media_metadata.pop(key)
+
+        converters = {
+            "year": int,
+            "players": lambda v: v.strip(" players").split("-"),
+            "playtime": lambda v: int(v.strip(" min")),
+            "min_age": lambda v: int(v.strip("+")),
+            "designers": lambda v: v.split(", "),
+            "publishers": lambda v: v.split(", "),
+        }
+        for key, convert in converters.items():
+            if key in details:
+                details[key] = convert(details[key])
+        return details
+
     def to_representation(self, instance):
         """Serialize the media metadata with the user consumptions and lists."""
         media_metadata = instance.get("media_metadata", {})
@@ -850,27 +876,7 @@ class CompleteMediaSerializer(serializers.Serializer):
 
         temp_media = type("TempMedia", (), media_metadata)()
 
-        details = media_metadata.get("details", {})
-        if "tvdb_id" in media_metadata:
-            details["tvdb_id"] = media_metadata.pop("tvdb_id")
-        if "last_episode_season" in media_metadata:
-            details["last_episode_season"] = media_metadata.pop("last_episode_season")
-        if "next_episode_season" in media_metadata:
-            details["next_episode_season"] = media_metadata.pop("next_episode_season")
-        if "last_issue_id" in media_metadata:
-            details["last_issue_id"] = media_metadata.pop("last_issue_id")
-        if "year" in details:
-            details["year"] = int(details["year"])
-        if "players" in details:
-            details["players"] = details["players"].strip(" players").split("-")
-        if "playtime" in details:
-            details["playtime"] = int(details["playtime"].strip(" min"))
-        if "min_age" in details:
-            details["min_age"] = int(details["min_age"].strip("+"))
-        if "designers" in details:
-            details["designers"] = details["designers"].split(", ")
-        if "publishers" in details:
-            details["publishers"] = details["publishers"].split(", ")
+        details = self._build_details(media_metadata)
         max_progress = media_metadata.get("max_progress")
 
         return super().to_representation(
@@ -1119,6 +1125,35 @@ class UpdateEpisodeSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
 
 
+class WatchMediaSerializer(serializers.Serializer):
+    """Serializer for adding a watch entry to a media item."""
+
+    score = serializers.FloatField(required=False, allow_null=True)
+    status = MediaStatusChoiceField(required=False)
+    progress = serializers.IntegerField(required=False, allow_null=True)
+    start_date = UTCDateTimeField(required=False, allow_null=True)
+    end_date = UTCDateTimeField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+
+class WatchEpisodeSerializer(serializers.Serializer):
+    """Serializer for adding a watch entry to an episode."""
+
+    end_date = UTCDateTimeField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+
+class WatchSeasonSerializer(WatchEpisodeSerializer):
+    """Serializer for adding a watch entry to every episode of a season."""
+
+    episode_numbers = serializers.ListField(
+        child=serializers.IntegerField(min_value=0),
+        required=False,
+        allow_empty=False,
+        help_text="Only record these episodes. Defaults to the whole season.",
+    )
+
+
 class UpdateGameSerializer(BaseUpdateMediaSerializer):
     """Serializer for updating game media items."""
 
@@ -1221,6 +1256,12 @@ class TrackMediaSerializer(serializers.Serializer):
     Unified payload for creating media items. Use `source: manual` for manual items
     (omit `media_id`) or set a provider `source` and `media_id` to create from a
     provider. When using a media provider, all media data will be overwritten.
+
+    Provider seasons need `season_number`; provider episodes need `season_number`
+    and `episode_number`, and record the first watch of the episode (only
+    `end_date`, default now, and `notes` are used). The parent season and show
+    are created when not tracked yet. Tracking something already tracked returns
+    409: add re-watches with the history endpoints.
     """
 
     source = MediaSourceCompleteChoiceField()

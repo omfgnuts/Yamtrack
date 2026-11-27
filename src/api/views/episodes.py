@@ -1,5 +1,6 @@
 from http import HTTPStatus as HTTP  # noqa: N814
 
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -22,10 +23,13 @@ from api.examples import (
 from api.helpers import (
     apply_validated_fields,
     error_response,
+    fetch_episode_metadata,
     get_item_lists,
+    get_user_season,
     paginate_data,
     parse_limit_offset,
     require_update_fields,
+    save_validated_fields,
     validate_media_path,
 )
 from api.schemas import (
@@ -51,9 +55,9 @@ from api.serializers import (
     PaginatedHistoryResponseSerializer,
     PaginatedListsMinimizedResponseSerializer,
     UpdateEpisodeSerializer,
+    WatchEpisodeSerializer,
 )
 from app.models import BasicMedia, Item, MediaTypes
-from app.providers import services
 from lists.models import CustomList, CustomListItem
 
 from .seasons import MediaSeasonSyncView
@@ -153,7 +157,6 @@ class MediaEpisodeDetailView(drf_views.APIView):
     def get(self, request, media_type, source, media_id, season_number, episode_number):
         """Retrieve details of a specific episode for the authenticated user."""
         user = request.user
-        episode = None
 
         error = validate_media_path(
             media_type,
@@ -163,40 +166,14 @@ class MediaEpisodeDetailView(drf_views.APIView):
         if error is not None:
             return error
 
-        try:
-            media_metadata = services.get_media_metadata(
-                MediaTypes.SEASON.value,
-                media_id,
-                source,
-                [season_number],
-            )
-        except Exception as e:  # noqa: BLE001
-            return error_response(
-                "An error occurred while fetching media metadata.",
-                HTTP.INTERNAL_SERVER_ERROR,
-                e,
-            )
-
-        if not media_metadata:
-            return Response(
-                {"detail": "Episode not found."},
-                status=HTTP.NOT_FOUND,
-            )
-        if "episodes" in media_metadata and media_metadata["episodes"] is not None:
-            episode = next(
-                (
-                    obj
-                    for obj in media_metadata["episodes"]
-                    if obj["episode_number"] == int(episode_number)
-                ),
-                None,
-            )
-
-        if not episode:
-            return Response(
-                {"detail": "Episode not found."},
-                status=HTTP.NOT_FOUND,
-            )
+        media_metadata, episode, error = fetch_episode_metadata(
+            media_id,
+            source,
+            season_number,
+            episode_number,
+        )
+        if error is not None:
+            return error
 
         try:
             user_medias = BasicMedia.objects.filter_media_prefetch(
@@ -269,7 +246,6 @@ class MediaEpisodeDetailView(drf_views.APIView):
     ):
         """Update a tracked episode item."""
         user = request.user
-        episode = None
 
         error = validate_media_path(
             media_type,
@@ -310,46 +286,18 @@ class MediaEpisodeDetailView(drf_views.APIView):
         data = serializer.validated_data
         require_update_fields(data)
 
-        try:
-            media_metadata = services.get_media_metadata(
-                MediaTypes.SEASON.value,
-                media_id,
-                source,
-                [season_number],
-            )
-        except Exception as e:  # noqa: BLE001
-            return error_response(
-                HTTP.INTERNAL_SERVER_ERROR.phrase, HTTP.INTERNAL_SERVER_ERROR, e
-            )
-
-        if not media_metadata:
-            return Response(
-                {"detail": "Episode not found."},
-                status=HTTP.NOT_FOUND,
-            )
-
-        episode = next(
-            (
-                obj
-                for obj in media_metadata.get("episodes") or []
-                if obj["episode_number"] == int(episode_number)
-            ),
-            None,
+        media_metadata, episode, error = fetch_episode_metadata(
+            media_id,
+            source,
+            season_number,
+            episode_number,
         )
-        if not episode:
-            return Response(
-                {"detail": "Episode not found."},
-                status=HTTP.NOT_FOUND,
-            )
+        if error is not None:
+            return error
 
-        apply_validated_fields(media, data)
-
-        try:
-            media.save()
-        except Exception as e:  # noqa: BLE001
-            return error_response(HTTP.BAD_REQUEST.phrase, HTTP.BAD_REQUEST, e)
-
-        media.refresh_from_db()
+        error = save_validated_fields(media, data, HTTP.BAD_REQUEST.phrase)
+        if error is not None:
+            return error
 
         lists = get_item_lists(
             user,
@@ -513,6 +461,87 @@ class MediaEpisodeConsumptionHistoryView(drf_views.APIView):
         paginated_data["results"] = consumptions
         return Response(paginated_data, status=HTTP.OK)
 
+    @extend_schema(
+        operation_id="episode_consumption_history_post",
+        summary="Add an episode consumption history entry",
+        description=(
+            "Records a new, distinct watch of the episode. Calling it again adds "
+            "another entry (re-watch) instead of updating the existing one. "
+            "The parent season must already be tracked, otherwise 404."
+        ),
+        parameters=[
+            MediaTypeParam,
+            SourceCompleteParam,
+            MediaIdParam,
+            SeasonNumberParam,
+            EpisodeNumberParam,
+        ],
+        request=WatchEpisodeSerializer,
+        responses={
+            201: OpenApiResponse(
+                HistorySerializer,
+                description="Consumption added successfully",
+                examples=[CONSUMPTION_EXAMPLE],
+            ),
+            400: BadRequestResponse,
+            404: NotFoundResponse,
+        },
+    )
+    def post(
+        self,
+        request,
+        media_type,
+        source,
+        media_id,
+        season_number,
+        episode_number,
+    ):
+        """Add a new watch entry for an episode."""
+        error = validate_media_path(
+            media_type,
+            source,
+            child_type=MediaTypes.EPISODE.value,
+        )
+        if error is not None:
+            return error
+
+        serializer = WatchEpisodeSerializer(data=request.data or {})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        season, error = get_user_season(
+            request.user,
+            media_id,
+            source,
+            season_number,
+        )
+        if error is not None:
+            return error
+
+        _, _, error = fetch_episode_metadata(
+            media_id,
+            source,
+            season_number,
+            episode_number,
+        )
+        if error is not None:
+            return error
+
+        try:
+            episode = season.watch(
+                episode_number,
+                data.get("end_date", timezone.now()),
+                data.get("notes") or "",
+            )
+        except Exception as e:  # noqa: BLE001
+            return error_response(
+                "An error occurred while adding the watch.",
+                HTTP.INTERNAL_SERVER_ERROR,
+                e,
+            )
+
+        return Response(HistorySerializer(episode).data, status=HTTP.CREATED)
+
 
 # /api/v1/media/[media_type]/[source]/[media_id]/[season_number]/[episode_number]/history/[consumption_id]/  # noqa: E501, W505
 class MediaEpisodeConsumptionEntryDetailView(drf_views.APIView):
@@ -552,6 +581,7 @@ class MediaEpisodeConsumptionEntryDetailView(drf_views.APIView):
         media_id,
         season_number,
         episode_number,
+        *,
         consumption_id,
     ):
         """Delete a specific consumption history entry for a specific episode."""
@@ -622,6 +652,7 @@ class MediaEpisodeConsumptionEntryDetailView(drf_views.APIView):
         media_id,
         season_number,
         episode_number,
+        *,
         consumption_id,
     ):
         """Retrieve a specific consumption history entry for a specific episode."""
@@ -694,6 +725,7 @@ class MediaEpisodeConsumptionEntryDetailView(drf_views.APIView):
         media_id,
         season_number,
         episode_number,
+        *,
         consumption_id,
     ):
         """Update a specific consumption history entry for a specific episode."""
@@ -842,6 +874,7 @@ class MediaEpisodeListDetailView(drf_views.APIView):
         media_id,
         season_number,
         episode_number,
+        *,
         list_id,
     ):
         """Remove a specific episode from a specific list."""
@@ -926,6 +959,7 @@ class MediaEpisodeListDetailView(drf_views.APIView):
         media_id,
         season_number,
         episode_number,
+        *,
         list_id,
     ):
         """Add a specific episode to a specific list."""
