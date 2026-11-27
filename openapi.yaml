@@ -1290,7 +1290,6 @@ paths:
                         end_date: null
                         notes: null
                         lists: []
-                    cast: []
                     item_id: tv/tmdb/105248/1
                     parent_id: tv/tmdb/105248
                     tracked: true
@@ -2126,7 +2125,6 @@ paths:
                         end_date: null
                         notes: null
                         lists: []
-                    cast: []
                     item_id: tv/tmdb/12345
                     parent_id: null
                     tracked: true
@@ -2311,7 +2309,6 @@ paths:
                         end_date: null
                         notes: null
                         lists: []
-                    cast: []
                     item_id: tv/tmdb/12345
                     parent_id: null
                     tracked: true
@@ -2598,7 +2595,6 @@ paths:
                         end_date: null
                         notes: null
                         lists: []
-                    cast: []
                     item_id: tv/tmdb/105248/1
                     parent_id: tv/tmdb/105248
                     tracked: true
@@ -2787,7 +2783,6 @@ paths:
                         end_date: null
                         notes: null
                         lists: []
-                    cast: []
                     item_id: tv/tmdb/105248/1
                     parent_id: tv/tmdb/105248
                     tracked: true
@@ -8175,27 +8170,6 @@ components:
           type: string
       required:
       - detail
-    CastMember:
-      type: object
-      description: Serializer for a cast member of a media item.
-      properties:
-        id:
-          type: integer
-          description: TMDB person id
-        name:
-          type: string
-        character:
-          type: string
-          nullable: true
-        image:
-          type: string
-          format: uri
-          description: Profile picture URL
-      required:
-      - character
-      - id
-      - image
-      - name
     ChangesHistoryChange:
       type: object
       description: Serializer for a single change in a history entry.
@@ -8378,12 +8352,6 @@ components:
           additionalProperties: {}
           description: Return the raw provider related payload.
           readOnly: true
-        cast:
-          type: array
-          items:
-            $ref: '#/components/schemas/CastMember'
-          description: Up to 30 main cast members. Only TMDB movies have cast data,
-            other media return an empty list
         item_id:
           type: string
         parent_id:
@@ -8402,7 +8370,6 @@ components:
           items:
             $ref: '#/components/schemas/ListMinimized'
       required:
-      - cast
       - consumptions
       - consumptions_number
       - details

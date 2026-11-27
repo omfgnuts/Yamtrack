@@ -713,15 +713,6 @@ class CompleteEpisodeSerializer(serializers.Serializer):
         )
 
 
-class CastMemberSerializer(serializers.Serializer):
-    """Serializer for a cast member of a media item."""
-
-    id = serializers.IntegerField(help_text="TMDB person id")
-    name = serializers.CharField()
-    character = serializers.CharField(allow_blank=True, allow_null=True)
-    image = serializers.URLField(help_text="Profile picture URL")
-
-
 class CompleteMediaSerializer(serializers.Serializer):
     """Serializer that builds a CompleteMedia response."""
 
@@ -749,13 +740,6 @@ class CompleteMediaSerializer(serializers.Serializer):
     score_count = serializers.IntegerField(allow_null=True)
     details = serializers.SerializerMethodField()
     related = serializers.SerializerMethodField()
-    cast = CastMemberSerializer(
-        many=True,
-        help_text=(
-            "Up to 30 main cast members. Only TMDB movies have cast data, "
-            "other media return an empty list"
-        ),
-    )
     item_id = ItemIdField()
     parent_id = ParentIdField()
     tracked = serializers.BooleanField()
@@ -896,7 +880,6 @@ class CompleteMediaSerializer(serializers.Serializer):
                 "score_count": media_metadata.get("score_count"),
                 "details": details,
                 "related": media_metadata.get("related", {}),
-                "cast": media_metadata.get("cast", []),
                 "item_id": temp_media,
                 "parent_id": temp_media,
                 "tracked": bool(user_medias),
